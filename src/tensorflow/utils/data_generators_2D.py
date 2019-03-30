@@ -3,16 +3,27 @@ import os
 
 from skimage import color, io as imageio, transform
 
-from shared import io
+def gen_2D_data(dataset, n=1000000):
+    if dataset == 'gaussian_grid':
+        generator_fn = create_gaussian_grid_data
+    elif dataset == 'two_spirals':
+        generator_fn = create_two_spirals_data
+    elif dataset == 'checkerboard':
+        generator_fn = create_checkerboard_data
+    elif dataset == 'einstein':
+        generator_fn = create_einstein_data
+    return generator_fn(n)
 
 
-def create_gaussian_grid_data(n, width, rotate=True):
+def create_gaussian_grid_data(n, width=15, rotate=True):
     bound = -2.5
-    means = np.array([
-        (x + 1e-3 * np.random.rand(), y + 1e-3 * np.random.rand())
-        for x in np.linspace(-bound, bound, width)
-        for y in np.linspace(-bound, bound, width)
-    ])
+    means = np.array(
+        [
+            (x + 1e-3 * np.random.rand(), y + 1e-3 * np.random.rand())
+            for x in np.linspace(-bound, bound, width)
+            for y in np.linspace(-bound, bound, width)
+        ]
+    )
 
     covariance_factor = 0.06 * np.eye(2)
 
@@ -20,10 +31,9 @@ def create_gaussian_grid_data(n, width, rotate=True):
     noise = np.random.randn(n, 2)
     data = means[index] + noise @ covariance_factor
     if rotate:
-        rotation_matrix = np.array([
-            [1 / np.sqrt(2), -1 / np.sqrt(2)],
-            [1 / np.sqrt(2), 1 / np.sqrt(2)]
-        ])
+        rotation_matrix = np.array(
+            [[1 / np.sqrt(2), -1 / np.sqrt(2)], [1 / np.sqrt(2), 1 / np.sqrt(2)]]
+        )
         data = data @ rotation_matrix
     data = data.astype(np.float32)
     return data
@@ -54,27 +64,23 @@ def create_checkerboard_data(n):
     return data
 
 
-def create_einstein_data(n, face='einstein'):
-    root = io.get_data_root()
-    path = os.path.join(root, face + '.jpg')
-    image = imageio.imread(path)
+def create_einstein_data(n, im_path='../../datasets/einstein.jpg'):
+    image = imageio.imread(im_path)
     image = color.rgb2gray(image)
     image = transform.resize(image, (512, 512))
 
-    grid = np.array([
-        (x, y) for x in range(image.shape[0]) for y in range(image.shape[1])
-    ])
+    grid = np.array(
+        [(x, y) for x in range(image.shape[0]) for y in range(image.shape[1])]
+    )
 
-    rotation_matrix = np.array([
-        [0, -1],
-        [1, 0]
-    ])
+    rotation_matrix = np.array([[0, -1], [1, 0]])
     p = image.reshape(-1) / sum(image.reshape(-1))
     ix = np.random.choice(range(len(grid)), size=n, replace=True, p=p)
     points = grid[ix].astype(np.float32)
     points += np.random.rand(n, 2)  # dequantize
-    points /= (image.shape[0])  # scale to [0, 1]
+    points /= image.shape[0]  # scale to [0, 1]
 
     data = (points @ rotation_matrix).astype(np.float32)
     data[:, 1] += 1
     return data
+

@@ -198,14 +198,17 @@ def train_model(args):
 
     # Create grid of test points for plotting density
     plot_grid_res = 128
-    lims = 1.1 * np.array(
-        [
-            data.min(axis=0)[0],
-            data.max(axis=0)[0],
-            data.min(axis=0)[1],
-            data.max(axis=0)[1],
-        ]
-    )
+    if args.dataset == 'einstein':
+        lims = np.array([0, 1, 0, 1])
+    else:
+        lims = 1.1 * np.array(
+            [
+                data.min(axis=0)[0],
+                data.max(axis=0)[0],
+                data.min(axis=0)[1],
+                data.max(axis=0)[1],
+            ]
+        )
     xi, yi = np.mgrid[
         lims[0] : lims[1] : plot_grid_res * 1j, lims[2] : lims[3] : plot_grid_res * 1j
     ]
@@ -254,18 +257,18 @@ def train_model(args):
                     )
                     ax.set_title("Data")
 
-                    # Plot proposal log prob
+                    # Plot proposal density
                     ax = axarr[1]
                     ax.pcolormesh(
                         xi, yi, np.exp(proposal_log_density_curr).reshape(xi.shape)
                     )
                     ax.set_title("Proposal")
 
-                    # Plot AEM log prob (estimated)
+                    # Plot AEM density (estimated)
                     ax = axarr[2]
                     ax.pcolormesh(xi, yi, np.exp(log_density_curr).reshape(xi.shape))
 
-                    # Enfore axis limits and remove ticks / ticklabels
+                    # Enforce axis limits and remove ticks / ticklabels
                     for ax in axarr:
                         ax.set_xlim(lims[:2])
                         ax.set_ylim(lims[2:])
@@ -276,7 +279,7 @@ def train_model(args):
                     plt.subplots_adjust(left=0.05, right=0.95, bottom=0.05, top=0.85)
 
                     # Save figure
-                    plt.savefig("{}/log_density.png".format(summary_dir), dpi=300)
+                    plt.savefig("{}/density.png".format(summary_dir), dpi=300)
                     plt.close()
 
                 if args.save_checkpoints:

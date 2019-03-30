@@ -1,5 +1,5 @@
 """ 
-Train AEM on UCI + BSDS300 datasets
+Eval AEM on UCI + BSDS300 datasets
 """
 import tensorflow as tf
 import numpy as np
@@ -10,6 +10,7 @@ import os
 
 from utils.data_utils import UCI
 from utils.aem import AEM
+from dotmap import DotMap
 
 
 def parse_args():
