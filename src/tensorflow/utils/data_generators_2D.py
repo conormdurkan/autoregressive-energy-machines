@@ -1,6 +1,5 @@
 """Numpy generators for 2D datasets. Some examples from 
 https://github.com/rtqichen/ffjord/blob/master/lib/toy_data.py"""
-
 import numpy as np
 import os
 

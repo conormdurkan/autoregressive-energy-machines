@@ -1,5 +1,4 @@
 """ Autoregressive Energy Machine (AEM)"""
-
 import tensorflow as tf
 
 from .made_utils import ResMADE

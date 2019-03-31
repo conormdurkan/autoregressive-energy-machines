@@ -1,5 +1,4 @@
 """ Energy networks (ENN) for AEM."""
-
 import tensorflow as tf
 
 
