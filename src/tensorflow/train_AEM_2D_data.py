@@ -1,7 +1,4 @@
-""" 
-Train AEM on UCI datasets
-"""
-
+"""Train AEM on 2D datasets."""
 
 import tensorflow as tf
 import numpy as np
@@ -198,7 +195,7 @@ def train_model(args):
 
     # Create grid of test points for plotting density
     plot_grid_res = 128
-    if args.dataset == 'einstein':
+    if args.dataset == "einstein":
         lims = np.array([0, 1, 0, 1])
     else:
         lims = 1.1 * np.array(

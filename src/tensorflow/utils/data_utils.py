@@ -1,4 +1,4 @@
-""" Data loading utilities"""
+""" Utilities for downloading, pre-processing and loading data."""
 import os
 import h5py
 import numpy as np
@@ -18,6 +18,17 @@ from .data_generators_2D import gen_2D_data
 
 
 def UCI(dataset, batch_size=64):
+    """ Tensorflow UCI + BSDS300 data-loader.
+
+    Arguments:
+        dataset -- One of {'power', 'gas', 'hepmass', 'miniboone', 'bsds300'} 
+        batch_size -- Integer batch size.
+    
+    Returns:
+        x_batch -- Tensor of batch data
+        data_val -- Numpy array with all validation data
+        data_test --  Numpy array with all test data
+    """
     data_train, data_val, data_test = load_UCI_np(dataset)
     Dataset = tf.data.Dataset.from_tensor_slices(
         tf.constant(np.random.permutation(data_train), tf.float32)
@@ -31,6 +42,17 @@ def UCI(dataset, batch_size=64):
 
 
 def Datasets2D(dataset, batch_size=64, n_ex=100000):
+    """ 2D datasets data-loader.
+
+    Arguments:
+        dataset -- One of {'gaussian_grid', 'two_spirals', 'checkerboard', 'einstein'} 
+        batch_size -- Integer batch size.
+        n_ex -- Total dataset size
+    
+    Returns:
+        x_batch -- Tensor of batch data
+        data_raw -- Numpy array with all data
+    """
     data_raw = gen_2D_data(dataset, n_ex)
     Dataset = tf.data.Dataset.from_tensor_slices(
         tf.constant(np.random.permutation(data_raw), tf.float32)
@@ -44,7 +66,6 @@ def Datasets2D(dataset, batch_size=64, n_ex=100000):
 
 
 def load_UCI_np(dataset, data_root="data"):
-    """Load UCI and BSDS300 datasets."""
     data_path = os.path.join(data_root, "processed", dataset)
     if not os.path.exists(data_path):
         download_preprocess_data(data_root=data_root)

@@ -1,12 +1,9 @@
-""" 
-Train AEM on UCI + BSDS300 datasets
-"""
+"""Train AEM on UCI + BSDS300 datasets."""
 import tensorflow as tf
 import numpy as np
 import argparse
 import json
 import os
-
 
 from utils.data_utils import UCI
 from utils.aem import AEM
@@ -31,7 +28,7 @@ def parse_args():
     parser.add_argument(
         "--summary_interval", type=int, default=2500, help="Summary save interval"
     )
-    # MADE options
+    # ResMADE options
     parser.add_argument(
         "--activation_MADE", type=str, default="relu", help="Activation for MADE"
     )

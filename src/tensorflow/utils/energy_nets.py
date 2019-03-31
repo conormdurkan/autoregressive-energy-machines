@@ -1,4 +1,5 @@
-""" Energy networks for AEM """
+""" Energy networks (ENN) for AEM."""
+
 import tensorflow as tf
 
 
@@ -11,11 +12,11 @@ def contextual_res_net(
     dropout_p=None,
     final_act=True,
 ):
-    """ Fully connected pre-activation resnet.
+    """ Fully connected pre-activation contextual resnet.
 
     Arguments:
-        x -- Tensor input for energy evaluation
-        context -- Context tensor from AEM
+        x -- Tensor input for energy evaluation. [N, 1] tensor. 
+        context -- Context tensor from AEM. [N, C] tensor.
     
     Keyword Arguments:
         n_res_blocks -- Number of residual blocks (default: {2})
@@ -25,7 +26,7 @@ def contextual_res_net(
         final_act -- Apply activation before final linear layer (default: {True})
     
     Returns:
-        neg_energy_x -- Negative energy of x
+        neg_energy_x -- Negative energy of x. [N, 1] tensor.
     """
 
     h = tf.layers.dense(tf.concat([x, context], axis=-1), hidden_dim)

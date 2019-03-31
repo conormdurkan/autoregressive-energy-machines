@@ -1,12 +1,9 @@
-""" 
-Eval AEM on UCI + BSDS300 datasets
-"""
+"""Eval trained AEM on UCI + BSDS300 datasets."""
 import tensorflow as tf
 import numpy as np
 import argparse
 import json
 import os
-
 
 from utils.data_utils import UCI
 from utils.aem import AEM

@@ -3,8 +3,58 @@ import numpy as np
 import tensorflow as tf
 
 
+def ResMADE(
+    x,
+    n_out,
+    n_residual_blocks=2,
+    hidden_units=256,
+    activation=tf.nn.relu,
+    dropout_p=None,
+    final_act=True,
+):
+    """ResMADE autoregressive network.
+    
+    Arguments:
+        x -- Model inputs. [N, D] tensor.
+    
+    Keyword Arguments:
+        n_out -- Number of outputs per dimension.
+        n_residual_blocks -- Number of residual blocks (default: {2})
+        hidden_units -- Number of hidden units per residual block (default: {256})
+        activation -- Activation function. (default: {tf.nn.relu})
+        dropout_p -- Dropout probability (default: {None})
+        final_act -- Use activation before final linear layer. (default: {True})
+    
+    Returns:
+        output -- Output tensor [N, D, K] where K = n_out.
+    """
+
+    input_depth = x.get_shape().as_list()[-1]
+    output = masked_dense(
+        inputs=x, units=hidden_units, num_blocks=input_depth, mask_type="input"
+    )
+    for _ in range(n_residual_blocks):
+        output = masked_residual_block(
+            inputs=output,
+            num_blocks=input_depth,
+            activation=activation,
+            dropout_p=dropout_p,
+            mask_type="hidden",
+        )
+    if final_act:
+        output = activation(output)
+    output = masked_dense(
+        inputs=output,
+        units=n_out * input_depth,
+        num_blocks=input_depth,
+        activation=None,
+        mask_type="output",
+        bias_initializer=tf.glorot_normal_initializer(),
+    )
+    return tf.reshape(output, [-1, input_depth, n_out])
+
+
 def _get_mask(in_features, out_features, autoregressive_features, mask_type="hidden"):
-    """Create a kernel mask."""
     max_ = max(1, autoregressive_features - 1)
     min_ = min(1, autoregressive_features - 1)
     if mask_type == "input":
@@ -37,24 +87,6 @@ def masked_dense(
     *args,
     **kwargs
 ):
-    """Masked dense layer for causal architectures.
-    
-    Arguments:
-        inputs -- Tensor inputs
-        units -- Number of output units
-        num_blocks -- Number of autoregressive blocks
-    
-    Keyword Arguments:
-        mask_type -- Mask type. input, hidden or output (default: {hidden})
-        kernel_initializer -- Kernel initializer (default: {None})
-        reuse -- Reuse layer parameters in scope (default: {None})
-        name -- Name for variables (default: {None})
-        activation -- Activation function (default: {None})
-    
-    Returns:
-        output -- Tensor output of masked layer.
-    """
-
     input_depth = inputs.shape.with_rank_at_least(1)[-1].value
     if input_depth is None:
         raise NotImplementedError(
@@ -87,22 +119,6 @@ def masked_dense(
 def masked_residual_block(
     inputs, num_blocks, activation=tf.nn.relu, dropout_p=None, *args, **kwargs
 ):
-    """Pre-activation masked residual block.
-
-    Basic component of ResMADE.
-    
-    Arguments:
-        inputs {Tensor} -- Tensor inputs
-        num_blocks {int} -- Number of autoregressive blocks
-    
-    Keyword Arguments:
-        activation {callable} -- Activation function (default: {tf.nn.relu})
-        dropout_p {float} -- Dropout probability (default: {None})
-    
-    Returns:
-        output -- Tensor output of residual block
-    """
-
     input_depth = inputs.get_shape().as_list()[-1]
 
     # First pre-act residual layer
@@ -134,52 +150,3 @@ def masked_residual_block(
     )
     return inputs + residual
 
-
-def ResMADE(
-    x,
-    n_out=4,
-    n_residual_blocks=2,
-    hidden_units=256,
-    activation=tf.nn.relu,
-    dropout_p=None,
-    final_act=True,
-):
-    """ResMADE autoregressive network for tabular data.
-    
-    Arguments:
-        x -- Model inputs. [N, D] Tensor.
-    
-    Keyword Arguments:
-        n_out -- Number of outputs per dimension. (default: {4})
-        n_residual_blocks -- Number of residual blocks (default: {2})
-        hidden_units -- Number of hidden units per residual block (default: {256})
-        activation -- Activation function. (default: {tf.nn.relu})
-        dropout_p -- Dropout probability (default: {None})
-        final_act -- Use activation before final linear layer. (default: {True})
-    
-    Returns:
-        output -- Output tensor [N, D, K] where K = n_out.
-    """
-
-    input_depth = x.get_shape().as_list()[-1]
-    output = masked_dense(
-        inputs=x, units=hidden_units, num_blocks=input_depth, mask_type="input"
-    )
-    for _ in range(n_residual_blocks):
-        output = masked_residual_block(
-            inputs=output,
-            num_blocks=input_depth,
-            activation=activation,
-            dropout_p=dropout_p,
-        )
-    if final_act:
-        output = activation(output)
-    output = masked_dense(
-        inputs=output,
-        units=n_out * input_depth,
-        num_blocks=input_depth,
-        activation=None,
-        mask_type="output",
-        bias_initializer=tf.glorot_normal_initializer(),
-    )
-    return tf.reshape(output, [-1, input_depth, n_out])

@@ -1,10 +1,11 @@
-""" Autoregressive Energy Machine (AEM) """
+""" Autoregressive Energy Machine (AEM)"""
+
 import tensorflow as tf
 
 from .made_utils import ResMADE
 from .energy_nets import contextual_res_net
 
-# Get activations
+
 def get_activation(activation_name):
     if activation_name == "tanh":
         activation = tf.nn.tanh
@@ -20,8 +21,7 @@ def get_activation(activation_name):
 
 
 class AEM:
-    """TODO
-    """
+    """Autoregressive Energy Machine (AEM). TODO""" 
 
     def __init__(
         self,
@@ -160,7 +160,7 @@ class AEM:
         proposal_samples = proposal_dist.sample(self.n_importance_samples)
         proposal_log_prob_samples_proposal = proposal_dist.log_prob(proposal_samples)
 
-        # Transpose samples and log probs and stop gradients to prevent backprop
+        # Stop gradients to prevent backprop wrt proposal samples
         self._proposal_samples = tf.stop_gradient(
             tf.transpose(proposal_samples, [1, 2, 0])
         )

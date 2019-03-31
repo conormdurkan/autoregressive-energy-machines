@@ -1,3 +1,6 @@
+"""Numpy generators for 2D datasets. Some examples from 
+https://github.com/rtqichen/ffjord/blob/master/lib/toy_data.py"""
+
 import numpy as np
 import os
 
@@ -40,9 +43,6 @@ def create_gaussian_grid_data(n, width=15, rotate=True):
 
 
 def create_two_spirals_data(n):
-    """
-    Modified from https://github.com/rtqichen/ffjord/blob/master/lib/toy_data.py
-    """
     m = np.sqrt(np.random.rand(n // 2, 1)) * 900 * (2 * np.pi) / 360
     a = 0.7
     d1x = -a * np.cos(m) * m + np.random.rand(n // 2, 1) * a / 2
@@ -54,9 +54,6 @@ def create_two_spirals_data(n):
 
 
 def create_checkerboard_data(n):
-    """
-    Modified from https://github.com/rtqichen/ffjord/blob/master/lib/toy_data.py
-    """
     x1 = np.random.rand(n) * 8 - 4
     x2_ = np.random.rand(n) + np.random.randint(-2, 2, n) * 2
     x2 = x2_ + (np.floor(x1) % 2)
