@@ -20,7 +20,26 @@ def get_activation(activation_name):
 
 
 class AEM:
-    """Autoregressive Energy Machine (AEM). TODO""" 
+    """Autoregressive Energy Machine (AEM).
+    
+    Arguments:
+        x_batch -- Model inputs [N, D] tensor
+        n_importance_samples -- Int number of proposal samples for norm constant estimation (default: 2)
+        proposal_comp_scale_min -- Minimum scale value for proposal components (default: 1e-3)
+        n_proposal_mixture_comps -- Number of mixture components in proposal conditionals (default: 20)
+        n_res_blocks_MADE -- Number of residual blocks in ResMADE (default: 4)
+        n_hidden_units_MADE -- Number of hidden units in ResMADE (default: 512)
+        activation_MADE -- Activation used in ResMADE (default: "relu")
+        dropout_p_MADE -- Training dropout probability in ResMADE (default: 0.0) 
+        final_act_MADE -- Apply activation before final dense layer in ResMADE (default: True)
+        n_context_units_energy_net -- Number of context units for ENN (default: 64)
+        n_res_blocks_energy_net -- Number of residual blocks in ENN (default: 4)
+        n_hidden_units_energy_net -- Number of hidden units in ENN (default: 128)
+        activation_energy_net -- Activation used in ResMADE (default: "relu")
+        dropout_p_energy_net -- Training dropout probability in ENN (default: 0.0) 
+        final_act_energy_net -- Apply activation before final dense layer in ENN (default: True)
+
+    """ 
 
     def __init__(
         self,
