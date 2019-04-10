@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--use_gpu', default=True, help='Whether to use GPU.')
 
 # data
-parser.add_argument('--dataset_name', type=str, default='hepmass', help='Dataset to use.')
+parser.add_argument('--dataset_name', type=str, default='power', help='Dataset to use.')
 parser.add_argument('--train_batch_size', type=int, default=512,
                     help='Size of batch used for training.')
 parser.add_argument('--val_frac', type=float, default=0.1,
@@ -40,7 +40,7 @@ parser.add_argument('--activation_made', default='relu',
                     help='Activation function for MADE.')
 parser.add_argument('--use_batch_norm_made', default=False,
                     help='Whether to use batch norm in MADE.')
-parser.add_argument('--dropout_probability_made', default=0.2,
+parser.add_argument('--dropout_probability_made', default=0.1,
                     help='Dropout probability for MADE.')
 
 # energy net
@@ -56,7 +56,7 @@ parser.add_argument('--activation_energy_net', default='relu',
                     help='Activation function for energy net.')
 parser.add_argument('--use_batch_norm_energy_net', default=False,
                     help='Whether to use batch norm in energy net.')
-parser.add_argument('--dropout_probability_energy_net', default=0.2,
+parser.add_argument('--dropout_probability_energy_net', default=0.1,
                     help='Dropout probability for energy net.')
 parser.add_argument('--scale_activation', default='softplus',
                     help='Activation to use for scales in proposal mixture components.')

@@ -8,11 +8,15 @@ def get_timestamp():
 
 
 def get_project_root():
-    return os.path.abspath('../../')
+    return os.path.abspath('../')
+
+
+def get_pytorch_root():
+    return os.path.join(get_project_root(), 'pytorch')
 
 
 def get_log_root():
-    return os.path.join(get_project_root(), 'log')
+    return os.path.join(get_pytorch_root(), 'log')
 
 
 def get_data_root():
@@ -20,11 +24,11 @@ def get_data_root():
 
 
 def get_checkpoint_root():
-    return os.path.join(get_project_root(), 'checkpoints')
+    return os.path.join(get_pytorch_root(), 'checkpoints')
 
 
 def get_output_root():
-    return os.path.join(get_project_root(), 'out')
+    return os.path.join(get_pytorch_root(), 'out')
 
 
 def main():
