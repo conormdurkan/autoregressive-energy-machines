@@ -7,9 +7,9 @@ This repo contains an implementation of the Autoregressive Energy Machine, outli
 We include reference models for both TensorFlow and PyTorch.
 
 <p align="center">
-  <img width="140" height="140" src="./figures/einstein-data.png">
-  <img width="140" height="140" src="./figures/einstein-aem.png">
-  <img width="140" height="140" src="./figures/einstein-aem-samples.png">
+  <img width="210" height="210" src="./figures/einstein-data.png">
+  <img width="210" height="210" src="./figures/einstein-aem.png">
+  <img width="210" height="210" src="./figures/einstein-aem-samples.png">
 </p>
 
 ### Running the code
