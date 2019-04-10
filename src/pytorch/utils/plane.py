@@ -3,7 +3,7 @@ import os
 
 from skimage import color, io as imageio, transform
 
-from shared import io
+from utils import io
 
 
 def create_gaussian_grid_data(n, width, rotate=True):

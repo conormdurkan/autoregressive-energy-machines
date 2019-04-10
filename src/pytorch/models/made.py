@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-import torchutils
+import utils
 
 from torch import nn
 from torch.nn import functional as F, init
@@ -18,7 +18,7 @@ def get_mask(in_features, out_features, autoregressive_features, mask_type=None)
 
     elif mask_type == 'output':
         in_degrees = torch.arange(in_features) % max_ + min_
-        out_degrees = torchutils.tile(
+        out_degrees = utils.tile(
             torch.arange(1, autoregressive_features + 1),
             out_features // autoregressive_features
         )

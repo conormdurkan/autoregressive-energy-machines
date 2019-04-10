@@ -6,7 +6,7 @@ import torch
 
 import data_
 import models
-import torchutils
+import utils
 
 from matplotlib import cm, pyplot as plt
 from tensorboardX import SummaryWriter
@@ -14,7 +14,7 @@ from torch import optim
 from torch.utils import data
 from tqdm import tqdm
 
-from shared import io
+from utils import io
 
 parser = argparse.ArgumentParser()
 
@@ -22,7 +22,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--use_gpu', type=bool, default=True, help='Whether to use GPU.')
 
 # data
-parser.add_argument('--face', type=str, default='einstein', help='Face to use.')
+parser.add_argument('--dataset_name', type=str, default='spirals',
+                    help='Name of dataset to use.')
 parser.add_argument('--n_data_points', default=int(1e6),
                     help='Number of unique data points in training set.')
 parser.add_argument('--batch_size', type=int, default=256,
@@ -80,9 +81,9 @@ parser.add_argument('--mixture_component_min_scale', default=1e-3,
 # optimization
 parser.add_argument('--learning_rate', default=5e-4,
                     help='Learning rate for Adam.')
-parser.add_argument('--n_total_steps', default=int(3e6),
+parser.add_argument('--n_total_steps', default=int(4e5),
                     help='Number of total training steps.')
-parser.add_argument('--alpha_warm_up_steps', default=None,
+parser.add_argument('--alpha_warm_up_steps', default=5000,
                     help='Number of warm-up steps for AEM density.')
 parser.add_argument('--hard_alpha_warm_up', default=True,
                     help='Whether to use a hard warm up for alpha')
@@ -111,10 +112,7 @@ else:
     device = torch.device('cpu')
 
 # Generate data
-train_dataset = data_.FaceDataset(
-    n=args.n_data_points,
-    face=args.face
-)
+train_dataset = data_.load_plane_dataset(args.dataset_name, args.n_data_points)
 train_loader = data_.InfiniteLoader(
     dataset=train_dataset,
     batch_size=args.batch_size,
@@ -126,8 +124,8 @@ train_loader = data_.InfiniteLoader(
 # Generate test grid data
 n_points_per_axis = 512
 bounds = np.array([
-    [0, 1],
-    [0, 1]
+    [-4, 4],
+    [-4, 4]
 ])
 grid_dataset = data_.TestGridDataset(n_points_per_axis=n_points_per_axis, bounds=bounds)
 grid_loader = data.DataLoader(
@@ -137,8 +135,8 @@ grid_loader = data.DataLoader(
 )
 
 # various dimensions for autoregressive and energy nets
-dim = 2 # D
-output_dim_multiplier = args.context_dim + 3 * args.n_mixture_components # K + 3M
+dim = 2  # D
+output_dim_multiplier = args.context_dim + 3 * args.n_mixture_components  # K + 3M
 
 # Create MADE
 made = models.ResidualMADE(
@@ -147,7 +145,7 @@ made = models.ResidualMADE(
     hidden_dim=args.hidden_dim_made,
     output_dim_multiplier=output_dim_multiplier,
     conditional=False,
-    activation=torchutils.parse_activation(args.activation_made),
+    activation=utils.parse_activation(args.activation_made),
     use_batch_norm=args.use_batch_norm_made,
     dropout_probability=args.dropout_probability_made
 ).to(device)
@@ -158,7 +156,7 @@ energy_net = models.ResidualEnergyNet(
     n_residual_blocks=args.n_residual_blocks_energy_net,
     hidden_dim=args.hidden_dim_energy_net,
     energy_upper_bound=args.energy_upper_bound,
-    activation=torchutils.parse_activation(args.activation_energy_net),
+    activation=utils.parse_activation(args.activation_energy_net),
     use_batch_norm=args.use_batch_norm_energy_net,
     dropout_probability=args.dropout_probability_energy_net
 ).to(device)
@@ -182,7 +180,7 @@ scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.n_total_steps)
 
 # create summary writer and write to log directory
 timestamp = io.get_timestamp()
-log_dir = os.path.join(io.get_log_root(), args.face, timestamp)
+log_dir = os.path.join(io.get_log_root(), args.dataset_name, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
 filename = os.path.join(log_dir, 'config.json')
 with open(filename, 'w') as file:
@@ -236,34 +234,37 @@ for step in tbar:
     if (step + 1) % args.visualize_interval == 0:
         # Plotting
         aem.eval()
-        aem.set_n_proposal_samples_per_input_validation(args.n_proposal_samples_per_input_validation)
+        aem.set_n_proposal_samples_per_input_validation(
+            args.n_proposal_samples_per_input_validation)
         log_density_np = []
         log_proposal_density_np = []
         for batch in grid_loader:
             batch = batch.to(device)
-            log_density, log_proposal_density, unnormalized_log_density, log_normalizer = aem(batch)
+            log_density, log_proposal_density, unnormalized_log_density, log_normalizer = aem(
+                batch)
             log_density_np = np.concatenate((
-                log_density_np, torchutils.tensor2numpy(log_density)
+                log_density_np, utils.tensor2numpy(log_density)
             ))
             log_proposal_density_np = np.concatenate((
-                log_proposal_density_np, torchutils.tensor2numpy(log_proposal_density)
+                log_proposal_density_np, utils.tensor2numpy(log_proposal_density)
             ))
 
         fig, axs = plt.subplots(1, 3, figsize=(7.5, 2.5))
 
-        # axs[0].imshow(train_dataset.image)
         axs[0].hist2d(train_dataset.data[:, 0], train_dataset.data[:, 1],
-                      range=[[0, 1], [0, 1]], bins=512, cmap=cm.viridis, rasterized=False)
+                      range=bounds, bins=512, cmap=cm.viridis, rasterized=False)
         axs[0].set_xticks([])
         axs[0].set_yticks([])
 
-        axs[1].pcolormesh(grid_dataset.X, grid_dataset.Y, np.exp(log_proposal_density_np).reshape(grid_dataset.X.shape))
+        axs[1].pcolormesh(grid_dataset.X, grid_dataset.Y,
+                          np.exp(log_proposal_density_np).reshape(grid_dataset.X.shape))
         axs[1].set_xlim(bounds[0])
         axs[1].set_ylim(bounds[1])
         axs[1].set_xticks([])
         axs[1].set_yticks([])
 
-        axs[2].pcolormesh(grid_dataset.X, grid_dataset.Y, np.exp(log_density_np).reshape(grid_dataset.X.shape))
+        axs[2].pcolormesh(grid_dataset.X, grid_dataset.Y,
+                          np.exp(log_density_np).reshape(grid_dataset.X.shape))
         axs[2].set_xlim(bounds[0])
         axs[2].set_ylim(bounds[1])
         axs[2].set_xticks([])
@@ -271,19 +272,19 @@ for step in tbar:
 
         plt.tight_layout()
 
-        path = os.path.join(io.get_output_root(), 'pytorch', '{}.png'.format(args.face))
+        path = os.path.join(io.get_output_root(), 'pytorch', '{}.png'.format(args.dataset_name))
         if not os.path.exists(path):
             os.makedirs(io.get_output_root())
         plt.savefig(path, dpi=300)
-        writer.add_figure(tag=args.face, figure=fig, global_step=step)
+        writer.add_figure(tag='test-grid', figure=fig, global_step=step)
         plt.close()
 
     if (step + 1) % args.save_interval == 0:
-        path = os.path.join(io.get_checkpoint_root(), 'pytorch', '{}.t'.format(args.face))
+        path = os.path.join(io.get_checkpoint_root(), 'pytorch', '{}.t'.format(args.dataset_name))
         if not os.path.exists(path):
             os.makedirs(io.get_checkpoint_root())
         torch.save(aem.state_dict(), path)
 
-path = os.path.join(io.get_checkpoint_root(), 'pytorch', '{}-{}.t'.format(args.face, timestamp))
+path = os.path.join(io.get_checkpoint_root(),
+                    'pytorch', '{}-{}.t'.format(args.dataset_name, timestamp))
 torch.save(aem.state_dict(), path)
-

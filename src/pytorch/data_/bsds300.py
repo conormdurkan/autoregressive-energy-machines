@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from torch.utils import data
 
-from shared.datautils.bsds300 import load_bsds300
+from utils.uciutils import load_bsds300
 
 
 class BSDS300Dataset(data.Dataset):

@@ -4,8 +4,8 @@ import os
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 
-from shared import io
-from shared.datautils.hepmass import preprocess_and_save_hepmass
+from utils import io
+from utils.uciutils import preprocess_and_save_hepmass
 
 
 class HEPMASSDataset(Dataset):

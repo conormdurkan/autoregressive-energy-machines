@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import cm, pyplot as plt
 from torch.utils.data import Dataset
 
-from shared.datautils import plane as sharedplane
+from utils import plane as sharedplane
 
 
 class PlaneDataset(Dataset):
@@ -94,7 +94,7 @@ def test():
     ax.set_yticks([])
 
     plt.show()
-    # path = os.path.join(torchutils.get_output_root(), 'plane-test.png')
+    # path = os.path.join(utils.get_output_root(), 'plane-test.png')
     # plt.savefig(path, rasterized=True)
 
 

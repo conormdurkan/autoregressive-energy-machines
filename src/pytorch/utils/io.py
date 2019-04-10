@@ -8,7 +8,7 @@ def get_timestamp():
 
 
 def get_project_root():
-    return os.path.abspath('../../../')
+    return os.path.abspath('../../')
 
 
 def get_log_root():

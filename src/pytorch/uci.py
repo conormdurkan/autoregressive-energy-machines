@@ -6,41 +6,41 @@ import torch
 
 import data_
 import models
-import torchutils
+import utils
 
-from matplotlib import cm, pyplot as plt
 from tensorboardX import SummaryWriter
 from torch import optim
 from torch.utils import data
 from tqdm import tqdm
 
-from shared import io
+from utils import io
 
 parser = argparse.ArgumentParser()
 
 # CUDA
-parser.add_argument('--use_gpu', type=bool, default=True, help='Whether to use GPU.')
+parser.add_argument('--use_gpu', default=True, help='Whether to use GPU.')
 
 # data
-parser.add_argument('--dataset_name', type=str, default='spirals',
-                    help='Name of dataset to use.')
-parser.add_argument('--n_data_points', default=int(1e6),
-                    help='Number of unique data points in training set.')
-parser.add_argument('--batch_size', type=int, default=256,
+parser.add_argument('--dataset_name', type=str, default='hepmass', help='Dataset to use.')
+parser.add_argument('--train_batch_size', type=int, default=512,
                     help='Size of batch used for training.')
+parser.add_argument('--val_frac', type=float, default=0.1,
+                    help='Fraction of validation set to use.')
+parser.add_argument('--val_batch_size', type=int, default=512,
+                    help='Size of batch used for validation.')
 parser.add_argument('--num_workers', type=int, default=0,
                     help='Number of workers used in data loaders.')
 
 # MADE
 parser.add_argument('--n_residual_blocks_made', default=4,
                     help='Number of residual blocks in MADE.')
-parser.add_argument('--hidden_dim_made', default=256,
+parser.add_argument('--hidden_dim_made', default=512,
                     help='Dimensionality of hidden layers in MADE.')
 parser.add_argument('--activation_made', default='relu',
                     help='Activation function for MADE.')
 parser.add_argument('--use_batch_norm_made', default=False,
                     help='Whether to use batch norm in MADE.')
-parser.add_argument('--dropout_probability_made', default=None,
+parser.add_argument('--dropout_probability_made', default=0.2,
                     help='Dropout probability for MADE.')
 
 # energy net
@@ -56,7 +56,7 @@ parser.add_argument('--activation_energy_net', default='relu',
                     help='Activation function for energy net.')
 parser.add_argument('--use_batch_norm_energy_net', default=False,
                     help='Whether to use batch norm in energy net.')
-parser.add_argument('--dropout_probability_energy_net', default=None,
+parser.add_argument('--dropout_probability_energy_net', default=0.2,
                     help='Dropout probability for energy net.')
 parser.add_argument('--scale_activation', default='softplus',
                     help='Activation to use for scales in proposal mixture components.')
@@ -64,7 +64,7 @@ parser.add_argument('--apply_context_activation', default=False,
                     help='Whether to apply activation to context vector.')
 
 # proposal
-parser.add_argument('--n_mixture_components', default=10,
+parser.add_argument('--n_mixture_components', default=20,
                     help='Number of proposal mixture components (per dimension).')
 parser.add_argument('--proposal_component', default='gaussian',
                     help='Type of location-scale family distribution '
@@ -72,7 +72,7 @@ parser.add_argument('--proposal_component', default='gaussian',
 parser.add_argument('--n_proposal_samples_per_input', default=20,
                     help='Number of proposal samples used to estimate '
                          'normalizing constant during training.')
-parser.add_argument('--n_proposal_samples_per_input_validation', default=100,
+parser.add_argument('--n_proposal_samples_per_input_validation', default=20,
                     help='Number of proposal samples used to estimate '
                          'normalizing constant during validation.')
 parser.add_argument('--mixture_component_min_scale', default=1e-3,
@@ -81,7 +81,7 @@ parser.add_argument('--mixture_component_min_scale', default=1e-3,
 # optimization
 parser.add_argument('--learning_rate', default=5e-4,
                     help='Learning rate for Adam.')
-parser.add_argument('--n_total_steps', default=int(4e5),
+parser.add_argument('--n_total_steps', default=400000,
                     help='Number of total training steps.')
 parser.add_argument('--alpha_warm_up_steps', default=5000,
                     help='Number of warm-up steps for AEM density.')
@@ -90,8 +90,6 @@ parser.add_argument('--hard_alpha_warm_up', default=True,
 
 # logging and checkpoints
 parser.add_argument('--monitor_interval', default=100,
-                    help='Interval in steps at which to report training stats.')
-parser.add_argument('--visualize_interval', default=10000,
                     help='Interval in steps at which to report training stats.')
 parser.add_argument('--save_interval', default=10000,
                     help='Interval in steps at which to save model.')
@@ -111,31 +109,29 @@ if args.use_gpu and torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-# Generate data
-train_dataset = data_.load_plane_dataset(args.dataset_name, args.n_data_points)
+# create datasets
+# training set
+train_dataset = data_.load_uci_dataset(args.dataset_name, split='train')
 train_loader = data_.InfiniteLoader(
     dataset=train_dataset,
-    batch_size=args.batch_size,
+    batch_size=args.train_batch_size,
     shuffle=True,
     drop_last=True,
     num_epochs=None
 )
 
-# Generate test grid data
-n_points_per_axis = 512
-bounds = np.array([
-    [-4, 4],
-    [-4, 4]
-])
-grid_dataset = data_.TestGridDataset(n_points_per_axis=n_points_per_axis, bounds=bounds)
-grid_loader = data.DataLoader(
-    dataset=grid_dataset,
-    batch_size=1000,
-    drop_last=False
+# validation set
+val_dataset = data_.load_uci_dataset(args.dataset_name, split='val', frac=args.val_frac)
+val_loader = data.DataLoader(
+    dataset=val_dataset,
+    batch_size=args.val_batch_size,
+    shuffle=True,
+    drop_last=True,
+    num_workers=args.num_workers
 )
 
-# various dimensions for autoregressive and energy nets
-dim = 2  # D
+# define parameters for MADE and energy net
+dim = train_dataset.dim  # D
 output_dim_multiplier = args.context_dim + 3 * args.n_mixture_components  # K + 3M
 
 # Create MADE
@@ -145,18 +141,18 @@ made = models.ResidualMADE(
     hidden_dim=args.hidden_dim_made,
     output_dim_multiplier=output_dim_multiplier,
     conditional=False,
-    activation=torchutils.parse_activation(args.activation_made),
+    activation=utils.parse_activation(args.activation_made),
     use_batch_norm=args.use_batch_norm_made,
     dropout_probability=args.dropout_probability_made
 ).to(device)
 
-# create energy net
+# Create energy net
 energy_net = models.ResidualEnergyNet(
     input_dim=(args.context_dim + 1),
     n_residual_blocks=args.n_residual_blocks_energy_net,
     hidden_dim=args.hidden_dim_energy_net,
     energy_upper_bound=args.energy_upper_bound,
-    activation=torchutils.parse_activation(args.activation_energy_net),
+    activation=utils.parse_activation(args.activation_energy_net),
     use_batch_norm=args.use_batch_norm_energy_net,
     dropout_probability=args.dropout_probability_energy_net
 ).to(device)
@@ -173,12 +169,12 @@ aem = models.AEM(
     apply_context_activation=args.apply_context_activation
 ).to(device)
 
-# make optimizer
+# optimizer and scheduler
 parameters = list(made.parameters()) + list(energy_net.parameters())
 optimizer = optim.Adam(parameters, lr=args.learning_rate)
 scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.n_total_steps)
 
-# create summary writer and write to log directory
+# create Summary Writer
 timestamp = io.get_timestamp()
 log_dir = os.path.join(io.get_log_root(), args.dataset_name, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
@@ -191,7 +187,7 @@ tbar = tqdm(range(args.n_total_steps))
 alpha = 0
 for step in tbar:
     aem.train()
-    scheduler.step(step)
+    scheduler.step()
     optimizer.zero_grad()
 
     # training step
@@ -213,10 +209,30 @@ for step in tbar:
     optimizer.step()
 
     if (step + 1) % args.monitor_interval == 0:
-        s = 'Loss: {:.4f}, log p: {:.4f}, log q: {:.4f}'.format(
+        loss = loss.detach()
+        aem.eval()
+        aem.set_n_proposal_samples_per_input_validation(args.n_proposal_samples_per_input_validation)
+        running_val_log_density = 0
+        running_val_log_proposal_density = 0
+        for val_batch in val_loader:
+            log_density_val, log_proposal_density_val, _, _ = aem(val_batch.to(device).detach())
+            mean_log_density_val = torch.mean(log_density_val).detach()
+            mean_log_proposal_density_val = torch.mean(log_proposal_density_val).detach()
+            running_val_log_density += mean_log_density_val
+            running_val_log_proposal_density += mean_log_proposal_density_val
+        running_val_log_density /= len(val_loader)
+        running_val_log_proposal_density /= len(val_loader)
+
+        s = 'Loss: {:.4f}, ' \
+            'train: {:.4f}, ' \
+            'val: {:.4f}, ' \
+            'train prop: {:.4f}, ' \
+            'val prop: {:.4f}'.format(
             loss.item(),
             mean_log_density.item(),
-            mean_log_proposal_density.item()
+            running_val_log_density.item(),
+            mean_log_proposal_density.item(),
+            running_val_log_proposal_density.item()
         )
         tbar.set_description(s)
 
@@ -225,66 +241,19 @@ for step in tbar:
             'loss': loss.detach(),
             'log-prob-aem': mean_log_density.detach(),
             'log-prob-proposal': mean_log_proposal_density.detach(),
+            'log-prob-aem-val': torch.Tensor([running_val_log_density]),
+            'log-prob-proposal-val': torch.Tensor([running_val_log_proposal_density]),
             'log-normalizer': mean_log_normalizer.detach(),
             'learning-rate': torch.Tensor(scheduler.get_lr()),
         }
         for summary, value in summaries.items():
             writer.add_scalar(tag=summary, scalar_value=value, global_step=step)
 
-    if (step + 1) % args.visualize_interval == 0:
-        # Plotting
-        aem.eval()
-        aem.set_n_proposal_samples_per_input_validation(
-            args.n_proposal_samples_per_input_validation)
-        log_density_np = []
-        log_proposal_density_np = []
-        for batch in grid_loader:
-            batch = batch.to(device)
-            log_density, log_proposal_density, unnormalized_log_density, log_normalizer = aem(
-                batch)
-            log_density_np = np.concatenate((
-                log_density_np, torchutils.tensor2numpy(log_density)
-            ))
-            log_proposal_density_np = np.concatenate((
-                log_proposal_density_np, torchutils.tensor2numpy(log_proposal_density)
-            ))
+        if (step + 1) % args.save_interval == 0:
+            path = os.path.join(io.get_checkpoint_root(), 'pytorch', '{}.t'.format(args.dataset_name))
+            if not os.path.exists(path):
+                os.makedirs(io.get_checkpoint_root())
+            torch.save(aem.state_dict(), path)
 
-        fig, axs = plt.subplots(1, 3, figsize=(7.5, 2.5))
-
-        axs[0].hist2d(train_dataset.data[:, 0], train_dataset.data[:, 1],
-                      range=bounds, bins=512, cmap=cm.viridis, rasterized=False)
-        axs[0].set_xticks([])
-        axs[0].set_yticks([])
-
-        axs[1].pcolormesh(grid_dataset.X, grid_dataset.Y,
-                          np.exp(log_proposal_density_np).reshape(grid_dataset.X.shape))
-        axs[1].set_xlim(bounds[0])
-        axs[1].set_ylim(bounds[1])
-        axs[1].set_xticks([])
-        axs[1].set_yticks([])
-
-        axs[2].pcolormesh(grid_dataset.X, grid_dataset.Y,
-                          np.exp(log_density_np).reshape(grid_dataset.X.shape))
-        axs[2].set_xlim(bounds[0])
-        axs[2].set_ylim(bounds[1])
-        axs[2].set_xticks([])
-        axs[2].set_yticks([])
-
-        plt.tight_layout()
-
-        path = os.path.join(io.get_output_root(), 'pytorch', '{}.png'.format(args.dataset_name))
-        if not os.path.exists(path):
-            os.makedirs(io.get_output_root())
-        plt.savefig(path, dpi=300)
-        writer.add_figure(tag='test-grid', figure=fig, global_step=step)
-        plt.close()
-
-    if (step + 1) % args.save_interval == 0:
-        path = os.path.join(io.get_checkpoint_root(), 'pytorch', '{}.t'.format(args.dataset_name))
-        if not os.path.exists(path):
-            os.makedirs(io.get_checkpoint_root())
-        torch.save(aem.state_dict(), path)
-
-path = os.path.join(io.get_checkpoint_root(),
-                    'pytorch', '{}-{}.t'.format(args.dataset_name, timestamp))
+path = os.path.join(io.get_checkpoint_root(), 'pytorch', '{}-{}.t'.format(args.dataset_name, timestamp))
 torch.save(aem.state_dict(), path)

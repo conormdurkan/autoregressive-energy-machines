@@ -4,8 +4,8 @@ import os
 from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 
-from shared import io
-from shared.datautils.miniboone import preprocess_and_save_miniboone
+from utils import io
+from utils.uciutils import preprocess_and_save_miniboone
 
 
 class MiniBooNEDataset(Dataset):
