@@ -17,7 +17,7 @@ We include reference models for both TensorFlow and PyTorch.
 #### TensorFlow
 
 #### PyTorch
-First, add both the ```src``` and ```pytorch``` directories to your Python path. Then, ```cd``` to the ```experiments``` directory and run
+```cd``` to the ```pytorch``` directory and run
 ```
 python <experiment>.py --<args>
 ```
