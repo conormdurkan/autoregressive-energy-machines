@@ -5,7 +5,7 @@ This repo contains Tensorflow and Pytorch implementations of the Autoregressive 
 > C. Nash, C. Durkan, _Autoregressive Energy Machines_. 2019. [[arXiv]]()
 
 <p align="center">
-  <img width="210" height="210" src="./figures/einstein-data.png">
-  <img width="210" height="210" src="./figures/einstein-aem.png">
-  <img width="210" height="210" src="./figures/einstein-aem-samples.png">
+  <img width="210" height="210" src="./img/einstein-data.png">
+  <img width="210" height="210" src="./img/einstein-aem.png">
+  <img width="210" height="210" src="./img/einstein-aem-samples.png">
 </p>
