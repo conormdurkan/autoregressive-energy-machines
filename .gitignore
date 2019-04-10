@@ -4,6 +4,6 @@ log/
 checkpoints/
 out/
 *.pyc
-src/tensorflow/data/
-src/tensorflow/logs/    
+tensorflow/data/
+tensorflow/logs/    
 *.vscode
