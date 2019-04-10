@@ -60,7 +60,7 @@ def create_checkerboard_data(n):
     return data
 
 
-def create_einstein_data(n, im_path='../../datasets/einstein.jpg'):
+def create_einstein_data(n, im_path='../img/einstein.jpg'):
     image = imageio.imread(im_path)
     image = color.rgb2gray(image)
     image = transform.resize(image, (512, 512))
