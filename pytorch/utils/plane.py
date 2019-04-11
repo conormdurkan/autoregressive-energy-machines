@@ -55,7 +55,7 @@ def create_checkerboard_data(n):
 
 
 def create_einstein_data(n, face='einstein'):
-    root = io.get_data_root()
+    root = io.get_image_root()
     path = os.path.join(root, face + '.jpg')
     image = imageio.imread(path)
     image = color.rgb2gray(image)

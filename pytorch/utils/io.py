@@ -20,7 +20,11 @@ def get_log_root():
 
 
 def get_data_root():
-    return os.path.join(get_project_root(), 'datasets')
+    return os.path.join(get_pytorch_root())
+
+
+def get_image_root():
+    return os.path.join(get_project_root(), 'img')
 
 
 def get_checkpoint_root():
